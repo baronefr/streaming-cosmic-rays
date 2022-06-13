@@ -1,0 +1,6 @@
+attrs:    
+    Figure:
+        background_fill_color: "#FFFFFF"
+        toolbar_location: "right"
+        min_border_bottom: 5
+        min_border_top: 5

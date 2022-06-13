@@ -1,0 +1,18 @@
+# downloads
+bin/download/
+bin/kafka/
+bin/spark/
+data/mapd-minidt-stream/
+
+# kafka & spark
+
+
+# checkpoints
+**/.ipynb_checkpoints
+**/__pycache__
+
+# custom hidden files
+*.hidden
+
+# tmps
+**/tmp/

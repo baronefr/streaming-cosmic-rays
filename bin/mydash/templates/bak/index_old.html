@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    {{ bokeh_css }}
+    {{ bokeh_js }}
+    <style type="text/css">{% include 'styles.css' %}</style>
+  </head>
+  <body>
+    {{ plot_div|indent(8) }}
+    {{ plot_script|indent(8) }}
+
+    <button class="custom_button_html">Custom Style: HTML Button</button>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+<html>
+
+  <head>
+    <title>COSMO - dashboard</title>
+    <link rel="icon" href="mydash/static/web_icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="mydash/static/bootstrap-grid-only/css/grid12.css">
+      
+    <meta charset="utf-8">
+    {{ bokeh_css }}
+    {{ bokeh_js }}
+    <style type="text/css">{% include 'styles.css' %}</style>
+  </head>
+
+  <body>
+    <div id='content'>
+    <img style="padding-right: 20px; padding-top: 15px;" align="left" src="mydash/static/web_icon.png" height="117" alt="" />
+    
+    <h1 id="this-title">COSMO</h1>
+    
+    <p style="text-align:left;">
+    <strong>Streaming processing of cosmic rays</strong>
+    <span style="float:right;">
+        Management and analysis of Physics Dataset, modB<br>
+        <b>Group 10</b> // Barone, Nagaro, Ninni, Valentini
+    </span>
+    </p>
+        
+    {{ plot_div|indent(8) }}
+    {{ plot_script|indent(8) }}
+
+    <hr>
+    <img src="https://user-images.githubusercontent.com/62724611/166108149-7629a341-bbca-4a3e-8195-67f469a0cc08.png" alt="" height="70" style="float: right; margin-right: 15px;"/>
+    <img src="https://user-images.githubusercontent.com/62724611/166108076-98afe0b7-802c-4970-a2d5-bbb997da759c.png" alt="" height="70" style="float: right; margin-right: 15px;"/>
+    <strong>MAPD (module B) project<br>AY 2021/2022 University of Padua</strong><br>ref github
+
+  </body>  
+      
+</html>
