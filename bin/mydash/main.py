@@ -9,13 +9,13 @@
 #
 #  launch with    bokeh serve --show bin/mydash/
 #--------------------------------------------------------
-#  coder: Barone Francesco, last edit: 12 jun 2022
+#  coder: Barone Francesco, last edit: 16 jun 2022
 #  Open Access licence
 #--------------------------------------------------------
 
-from kafka import KafkaConsumer
 from datetime import datetime
 from threading import Thread
+from kafka import KafkaConsumer
 from queue import Queue
 import json
 import numpy as np
@@ -25,8 +25,15 @@ from bokeh.models import ColumnDataSource, Div, Paragraph, Range1d, Slider
 from bokeh.plotting import curdoc, figure
 
 from bokeh.server.server import Server
-from bokeh.models import Button, Dropdown, Label, Span, RadioButtonGroup
+from bokeh.models import Button, Dropdown, Label, Span, RadioButtonGroup, CheckboxGroup
 from bokeh.models.widgets import Tabs, Panel
+
+
+DEBUG_LEVEL = 0
+# 0  -  errors only
+# 1  -  warnings only
+# 2  -  user actions
+# 4  -  full info
 
 
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092',]
@@ -34,6 +41,7 @@ TOPIC='cosmo-results'
 
 chamber_colors = ["#ff2b24", "#ffcc00", "#00cc33", "#004ecc"]
 
+TIMESTAMP_FORMAT = "%H:%M:%S %d-%m-%Y"
 
 class mykafka_consumer(Thread):
     
@@ -42,7 +50,7 @@ class mykafka_consumer(Thread):
         
         # setup kafka consumer        
         consumer = KafkaConsumer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-                                 consumer_timeout_ms=10000
+                                 consumer_timeout_ms=20000
                                 )
         consumer.subscribe(TOPIC)
         print( consumer.subscription() )
@@ -59,19 +67,24 @@ class mykafka_consumer(Thread):
         # Initializing a queue
         self.queue = Queue(maxsize = 20)
         self.semaphore = True
-        self.button = None
+        self.pause_button = None
+        self.pause_type = None
         self.last_timestamp = 'never'
         print('kafka setup!')
         
-    def set_button_obj(self, bt):
-        self.button = bt
+    def set_pause_callback(self, bt, cb):
+        self.pause_button = bt
+        self.pause_type = cb
+        
+    def pause_keep_buffer(self):
+        # note:  if (0 in self.pause_type.active) is True -> checkbox is active
+        return (0 in self.pause_type.active)
     
     def toggle_semaphore(self):
         self.semaphore = not self.semaphore
-        if self.button is not None:
-            if self.semaphore:
-                self.button.button_type='success'
-            else: self.button.button_type='warning'
+        if self.pause_button is not None:
+            if self.semaphore: self.pause_button.button_type = 'success'
+            else:              self.pause_button.button_type = 'warning'
         return self.semaphore
     
     def run(self):
@@ -80,13 +93,13 @@ class mykafka_consumer(Thread):
                 print(' ERROR: Queue is full, should you be faster?')
                 break
             self.last_datetime = datetime.now()
-            self.last_timestamp = self.last_datetime.strftime("%H:%M:%S %d-%m-%Y")
-            if self.semaphore:
+            self.last_timestamp = self.last_datetime.strftime(TIMESTAMP_FORMAT)
+            
+            if self.semaphore or ( self.pause_keep_buffer() ):
                 self.queue.put(msg)
-                #print('received msg')
-            else:
-                pass
-                #print('received msg - plot is paused')
+            
+            if(DEBUG_LEVEL >= 3):
+                print('received msg')
 
             
 ## break down the message into its main components
@@ -114,24 +127,31 @@ print('Kafka consumer online!')
 def update_graphs():  # read data from buffer & update plotsz
     global kc
     
-    # update timestamp
-    div_last_data.text = div_last_data_strbase.format( kc.last_timestamp ) # update data timestamp
+    # update data timestamp
+    div_last_data.text = div_last_data_strbase.format( kc.last_timestamp )
     
+    # if queue is empty...
     if kc.queue.empty():
-        #print('Queue empty, not updating')
+        if(DEBUG_LEVEL >= 3): print('Queue empty, not updating')
         return 1
     
+    # ... or if there is new data
     dd = json.loads( kc.queue.get().value )
-    
-    # update if new data is provided
     cleansed = dd['cleansed']
-    div_proc_hits.text = div_proc_hits_strbase % (cleansed[0], cleansed[1], cleansed[2], cleansed[3], dd['tot_hits'])
-    div_last_refresh.text = div_last_refresh_strbase.format( datetime.now().strftime("%H:%M:%S %d-%m-%Y") )
+    
+    ## update history
     cds_tdc_history.stream( dict( t=[kc.last_datetime], ch0=[cleansed[0]], ch1=[cleansed[1]], 
                                   ch2=[cleansed[2]], ch3=[cleansed[3]])
                           )
     
-    # update plots data
+    if not kc.semaphore:
+        # do not update main tab
+        return 0
+    
+    ## update main tab
+    div_proc_hits.text = div_proc_hits_strbase % (cleansed[0], cleansed[1], cleansed[2], cleansed[3], dd['tot_hits'])
+    div_last_refresh.text = div_last_refresh_strbase.format( datetime.now().strftime(TIMESTAMP_FORMAT) )
+
     active_orb = dd['active_orbit']
     cds_tdc_orb.data =  {'x': np.arange(len(active_orb[0])), 'ch0': active_orb[0], 'ch1': active_orb[1],
                   'ch2': active_orb[2], 'ch3': active_orb[3]}
@@ -166,8 +186,7 @@ cds_drifts = ColumnDataSource( { 'ch0': [], 'ch1': [], 'ch2': [], 'ch3': [], 'ed
 cds_tdc_history = ColumnDataSource( {'t':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[]} )
 
 # active TDC vs orbits for each detector
-plot_TDC_orbits = figure( #width=900,
-                         sizing_mode="stretch_width",
+plot_TDC_orbits = figure(sizing_mode="stretch_width",
                          plot_height=320, tools="pan,reset,save"
         #toolbar_location=None
     )
@@ -215,24 +234,21 @@ notsobig = {"font-size": "120%", "font-weight": "bold"}
 big = {"font-size": "150%", "font-weight": "bold"}
 bigger = {"font-size": "200%", "font-weight": "bold"}
 
-# header & footer
+# header
 head_text = [ Div(text=r"dashboard ver 0.0") ]
-footer = Div( text="bokeh footer", width=1600, height=20, align='center')
 
 # button to start/stop simulation
-bt = Button(label='pause', button_type="success", width=100,  sizing_mode="fixed", align='center')
-bt.on_click(kc.toggle_semaphore) # TODO
-kc.set_button_obj(bt) # link button to data reader obj
+pause_bt = Button(label='pause', button_type="success", width=100, sizing_mode="fixed", align='center')
+pause_bt.on_click( kc.toggle_semaphore )
+pause_cbox = CheckboxGroup(labels=['keep history updated in pause'], active=[0])
+
+kc.set_pause_callback(pause_bt, pause_cbox) # set callback objects
+
+
 
 # graph selector
 graph_type_tdc_labels = ["Histogram", "Heatmap"]
 graph_type_tdc = RadioButtonGroup(labels=graph_type_tdc_labels, active=0)
-
-# dropdown
-menu = [("Item 1", "item_1"), ("Item 2", "item_2"), None, ("Item 3", "item_3")]
-dropdown = Dropdown(label="Dropdown button", button_type="warning", menu=menu)
-#dropdown.js_on_event("menu_item_click", CustomJS(code="console.log('dropdown: ' + this.item, this.toString())"))
-
 
 
 # divs
@@ -303,28 +319,21 @@ graphs_tab1 = layout([ div_proc_hits, Div(text='<br><br>'),  # table with proces
                        Div(text="Drift times per detector", style = notsobig, sizing_mode="stretch_width"),
                        [ hist_drift0, hist_drift1, hist_drift2, hist_drift3 ],
                      ], sizing_mode="stretch_width")
-panel_tab1 = Panel(child=graphs_tab1, title="Live")
+panel_tab1 = Panel(child=graphs_tab1, title="Data quality (live)")
 
-graphs_tab2 = layout([ Div(text="TDC hits", style = notsobig, sizing_mode="stretch_width"),
+graphs_tab2 = layout([ pause_cbox,
+                       Div(text="TDC hits", style = notsobig, sizing_mode="stretch_width"),
                        plot_TDC_history
                      ], sizing_mode="stretch_width")
-panel_tab2 = Panel(child=graphs_tab2, title="History")
+panel_tab2 = Panel(child=graphs_tab2, title="Event monitor")
 
 lyt = grid([ head_text,
-             row( column(bt, div_last_refresh, div_last_data, width= 260, sizing_mode="fixed"),
+             row( column(pause_bt, div_last_refresh, div_last_data, width= 260, sizing_mode="fixed"),
                   Tabs(tabs=[ panel_tab1, panel_tab2 ], sizing_mode="stretch_width") ,
                   sizing_mode="stretch_width"),
-             #footer
            ], sizing_mode='stretch_width')
 
 doc.add_root(lyt)
+doc.title = "COSMO dashboard"
 
 # TODO   set server https://docs.bokeh.org/en/latest/docs/user_guide/server.html
-#server = Server({'/': doc}, num_procs=4)
-#server.start()
-#
-#if __name__ == '__main__':
-#    print('Opening Bokeh application on http://localhost:5006/')
-#
-#    server.io_loop.add_callback(server.show, "/")
-#    server.io_loop.start()
