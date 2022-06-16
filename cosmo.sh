@@ -65,7 +65,16 @@ fake_analytics() {
     ./bin/fake_analytics.py
 }
 
+deploy_spark() {
+    bin/spark/sbin/start-master.sh --host localhost --port 7077 --webui-port 8080
+    #bin/spark/sbin/start-workers.sh spark://localhost:7077
+    bin/spark/sbin/start-slave.sh spark://localhost:7077
+}
 
+stop_spark() {
+    bin/spark/sbin/stop-slave.sh
+    bin/spark/sbin/stop-master.sh
+}
 
 #####################
 #   routines        #

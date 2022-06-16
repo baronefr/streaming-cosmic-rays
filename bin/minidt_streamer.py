@@ -24,12 +24,11 @@ import numpy as np
 from threading import *
 
 
-producer_rate = 10         # Hz
+producer_rate = 1100       # Hz
 preload_margin = 500000
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092',]
 TOPIC='cosmo-stream'
 file_template = "./data/mapd-minidt-stream/data_0000{:02d}.txt"
-# rewind ?
 
 
 class parallel_reader(Thread):
@@ -40,7 +39,15 @@ class parallel_reader(Thread):
     def run(self):
         print('> pre-loading', self.fname)
         tic = time.perf_counter()
-        self.records = np.loadtxt(self.fname, skiprows=1, delimiter=',')
+        
+        # store in memory lines of the file (except first)
+        with open(self.fname) as f:
+            self.records = f.readlines()
+            self.records = self.records[1:]
+        
+        #  alternative: store in numpy arrays (not convenient!)
+        #self.records = np.loadtxt(self.fname, skiprows=1, delimiter=',')
+        
         self.length = len(self.records)
         toc = time.perf_counter()
         print(' -- buffered', self.length, f'samples in {round(toc-tic,2)}s')
@@ -48,7 +55,9 @@ class parallel_reader(Thread):
 
 
 # Kafka producer object
-producer = KafkaProducer(bootstrap_servers = KAFKA_BOOTSTRAP_SERVERS)
+producer = KafkaProducer(bootstrap_servers = KAFKA_BOOTSTRAP_SERVERS, linger_ms=2000, batch_size=1024*1024)  #batch_size
+# check doc at  https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html
+
 
 # init the data pool
 dataset = parallel_reader( file_template.format(0) )
@@ -66,16 +75,23 @@ while 1:
         dataset = parallel_reader( file_template.format(current_data+1) )
         dataset.start()
     
-    print(np.sum(cdata[idx]))
+    #print(cdata[idx])  # debug only
+    
+    ## if you like the JSON style...
     #msg = {
-    #    'name': random.choice(first_names),
-    #    'surname': random.choice(last_names),
-    #    'amount': '{:.2f}'.format(random.random()*1000),
-    #    'delta_t': '{:.2f}'.format(random.random()*10),
-    #    'flag': random.choices([0,1], weights=[0.8, 0.2])[0]
+    #    'HEAD': cdata[idx][0],
+    #    'FPGA': cdata[idx][1],
+    #    'TDC_CHANNEL': cdata[idx][2],
+    #    'ORBIT_CNT': cdata[idx][3],
+    #    'BX_COUNTER': cdata[idx][4],
+    #    'TDC_MEAS' : cdata[idx][5]
     #}
-    #producer.send(TOPIC, json.dumps(msg).encode('utf-8'))
-    #producer.flush()
+    #lst = tuple(int(xx) for xx in cdata[idx])
+    #print(json.dumps(lst))
+    #producer.send(TOPIC, json.dumps(lst).encode('utf-8'))
+    
+    producer.send(TOPIC, cdata[idx].encode('utf-8'))
+    #producer.flush()  # no if you aggregate into batches!
 
     idx += 1
     if idx == clen:

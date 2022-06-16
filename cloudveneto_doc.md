@@ -1,4 +1,4 @@
-# use our Spark cluster
+# deploy the Spark cluster on Cloud Veneto
 
 ## first setup
 
@@ -6,16 +6,16 @@ In `etc/hosts` add
 
 ```
 # MAPD B COSMO
-127.0.0.50	master.cosmo
-127.0.0.51	slave1.cosmo
-127.0.0.52      slave2.cosmo
+127.0.0.50  master.cosmo
+127.0.0.51  slave1.cosmo
+127.0.0.52  slave2.cosmo
 ```
 
 In `.ssh/config` add
 ```
 Host mapd_cloud_gate
     HostName gate.cloudveneto.it
-    User fbarone
+    User YOURUSERNAME
     LocalForward master.cosmo:2022 10.67.22.128:22
     LocalForward master.cosmo:1200 10.67.22.128:1200
     LocalForward master.cosmo:8080 10.67.22.128:8080
