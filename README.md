@@ -21,6 +21,8 @@ The dataset comes from muon detectors that have been built and installed in Legn
 A **video demo** is available [here](https://youtu.be/qw_6mcKxGbU), although it is NOT indicative of the final performance of our delivery. Sometimes the data buffer starts before the actual Spark processing & data accumulates, so Spark has to work more in order to catch up with the buffer. The stream stabilizes usually within 2 minutes. The final **dashboard** looks like this:
 ![dashscreen](share/dashscreen.png)
 
+<br>
+
 ### COSMO
 
 COSMO is an utility to manage the execution of remote streaming analysis. It is coded in **bash**, and it must be installed on the master node.
@@ -35,6 +37,8 @@ COSMO provides access to *functions* (which act on a single entity of our framew
 | `cosmo dismiss` | stop clusters |
 
 COSMO loads the execution parameters from a .ini **configuration file**, which must be provided inside its own directory in `./config/*`. We provide two default setups: `config/localhost` and `config/cloud`. The latter is the one we configured explicitly for Cloud Veneto. Nevertheless, even the localhost preset must be edited depending on your environment.
+
+<br><br>
 
 ## Setup
 
@@ -53,6 +57,7 @@ export -f cosmo
 ```
 replacing YOUR_ABSOLUTE_PATH with the actual absolute path of your installation. The variable COSMO_CONFIG_PATH specifies which configuration files to use.
 
+<br>
 
 ## Execution
 
@@ -86,7 +91,7 @@ Login to the *MAPD-B_Gr10-1* machine, with user *cosmo*. Then invoke `cosmo` as 
 
 ***
 
-The logo above is provided under Flaticon License, <a href="https://www.flaticon.com/free-icons/cosmos" title="cosmos icons">Cosmos icons created by Ridho Imam Prayogi - Flaticon</a>.
+The logo of this application is provided under Flaticon License, <a href="https://www.flaticon.com/free-icons/cosmos" title="cosmos icons">Cosmos icons created by Ridho Imam Prayogi - Flaticon</a>.
 
 ***
 
