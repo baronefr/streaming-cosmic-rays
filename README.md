@@ -1,23 +1,24 @@
 # Streaming processing of cosmic rays
 
-<span style="float:right;">
+<p align="center">
 Management and analysis of Physics Dataset, modB<br>
 <b>Group 10</b> // Barone, Nagaro, Ninni, Valentini
-</span>
+</p>
+
 
 This is our final project for Management and Analysis of Physics Dataset (module B). In this work, we perform **streaming processing of data collected by a particle physics detector**, publishing the data quality analysis to a **dashboard for live monitoring**. The workflow is summarized in the following schema:
 
 ![framework](share/framework.png)
 
-- Spark: compute the statistics about the live data
-- Kafka: manage the data IO & deliver the statistics
-- Bokeh: process the statistics & create a dashboard
+- **Spark**: compute the statistics about the live data
+- **Kafka**: manage the data IO & deliver the statistics
+- **Bokeh**: process the statistics & create a dashboard
 
 In order to manage all the involved entities, we provide a simple bash interface to **manage the cluster routines: COSMO**.
 
 The dataset comes from muon detectors that have been built and installed in Legnaro INFN Laboratories.
 
-A **video demo** is available [here](https://youtu.be/qw_6mcKxGbU). The final **dashboard** looks like this:
+A **video demo** is available [here](https://youtu.be/qw_6mcKxGbU), although it is NOT indicative of the final performance of our delivery. Sometimes the data buffer starts before the actual Spark processing & data accumulates, so Spark has to work more in order to catch up with the buffer. The stream stabilizes usually within 2 minutes. The final **dashboard** looks like this:
 ![dashscreen](share/dashscreen.png)
 
 ### COSMO
