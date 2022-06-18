@@ -2,23 +2,23 @@
 
 #########################################################
 #   MAPD module B // University of Padua, AY 2021/22
-#   Group 2202 / Barone Nagaro Ninni Valentini
+#   Group 10 / Barone Nagaro Ninni Valentini
 #
 #  This script stops a Kafka server (+Zookeper).
 #
 #--------------------------------------------------------
-#  coder: Barone Francesco, last edit: 10 jun 2022
+#  coder: Barone Francesco, last edit: 17 jun 2022
 #  Open Access licence
 #--------------------------------------------------------
 
 echo " stop kafka | using cfg: $COSMO_CONFIG_PATH"
-source <(grep = $COSMO_CONFIG_PATH/kafka.ini)
+source <(grep = $COSMO_CONFIG_PATH/main.ini)
 
 
 # note:  make sure that  delete.topic.enable  is true in kafka config file
 echo " > deleting topics"
-for i in ${!TOPICS[@]}; do
-    $KAFKA_BIN/kafka-topics.sh --delete --topic ${TOPICS[$i]}  --bootstrap-server localhost:$BOOTSTRAP_PORT
+for i in ${!MANAGED_TOPIC[@]}; do
+    $KAFKA_BIN/kafka-topics.sh --delete --topic ${MANAGED_TOPIC[$i]}  --bootstrap-server $KAFKA_BOOTSTRAP
 done
 
 echo " > stopping servers"

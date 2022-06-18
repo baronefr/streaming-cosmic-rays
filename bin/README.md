@@ -1,12 +1,20 @@
 # streaming-cosmic-rays/**bin**
 
+**description**
+
+- **cosmo** the bash tool to manage the cluster execution
+- **mydash** the bokeh dashboard to monitor the processed data
+
+- *spark_analysis.py* is the actual Spark analysis code
+    - to make this file more readable, we provide a Jupyter notebook: *spark_analysis_demo.ipynb*
+- *streamer_local_minidt.py* creates a stream of values from muon detectors
+
 ### requirements
 
-Download **Kafka 3.2.0** from [here](https://www.apache.org/dyn/closer.cgi?path=/kafka/3.2.0/kafka_2.13-3.2.0.tgz) and unpack it to `/kafka/`.
+If you don't have already a Kafka & Spark cluster, you must configure your own.
 
-Download **Spark 3.2.1** from [here](https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz) and unpack it to `/spark/`.
+Download **Kafka 3.2.0** from [here](https://www.apache.org/dyn/closer.cgi?path=/kafka/3.2.0/kafka_2.13-3.2.0.tgz).
 
-### description
+Download **Spark 3.2.1** from [here](https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz).
 
-- **cosmo** the bash tool to manage the execution of various components
-- **mydash** the bokeh dashboard to monitor the processed data
+Then link the resources as you wish.

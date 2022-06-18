@@ -2,14 +2,14 @@
 
 #########################################################
 #   MAPD module B // University of Padua, AY 2021/22
-#   Group 2202 / Barone Nagaro Ninni Valentini
+#   Group 10 / Barone Nagaro Ninni Valentini
 #
 #  This is the monitor dashboard for the cosmic rays
 #  telescope, reading live data from Kafka topic.
 #
-#  launch with    bokeh serve --show bin/mydash/
+#  launch with    bokeh serve --show bin/mydash/ ...
 #--------------------------------------------------------
-#  coder: Barone Francesco, last edit: 16 jun 2022
+#  coder: Barone Francesco, last edit: 17 jun 2022
 #  Open Access licence
 #--------------------------------------------------------
 
@@ -19,6 +19,9 @@ from kafka import KafkaConsumer
 from queue import Queue
 import json
 import numpy as np
+import sys
+import configparser
+from configparser import ExtendedInterpolation
 
 from bokeh.layouts import column, row, layout, grid
 from bokeh.models import ColumnDataSource, Div, Paragraph, Range1d, Slider
@@ -36,12 +39,34 @@ DEBUG_LEVEL = 0
 # 4  -  full info
 
 
-KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092',]
-TOPIC='cosmo-results'
+# parsing settings
+if len(sys.argv) > 1:
+    print('-- environment mode, target:', sys.argv[1])
+    
+    # read config file
+    config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
+    config.read(sys.argv[1])
+    try:
+        KAFKA_BOOTSTRAP_SERVER = str( config['KAFKA']['KAFKA_BOOTSTRAP'] ).replace('\'', '')
+        TOPIC = str(config['KAFKA']['TOPIC_RES']).replace('\'', '')
+    except Exception as e:
+        print('ERROR: config file error')
+        print(e)
+        sys.exit(1)
+else:
+    print('-- standalone mode')
+    KAFKA_BOOTSTRAP_SERVER = 'localhost:9092'
+    TOPIC = 'cosmo-results'
+
+print('[info] configuration:')
+print(f' server {KAFKA_BOOTSTRAP_SERVER} on topic {TOPIC}')
+
+#########################################################
 
 chamber_colors = ["#ff2b24", "#ffcc00", "#00cc33", "#004ecc"]
-
 TIMESTAMP_FORMAT = "%H:%M:%S %d-%m-%Y"
+
+#########################################################
 
 class mykafka_consumer(Thread):
     
@@ -49,8 +74,8 @@ class mykafka_consumer(Thread):
         Thread.__init__(self) 
         
         # setup kafka consumer        
-        consumer = KafkaConsumer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-                                 consumer_timeout_ms=20000
+        consumer = KafkaConsumer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVER,
+                                 consumer_timeout_ms=30000
                                 )
         consumer.subscribe(TOPIC)
         print( consumer.subscription() )
@@ -101,15 +126,6 @@ class mykafka_consumer(Thread):
             if(DEBUG_LEVEL >= 3):
                 print('received msg')
 
-            
-## break down the message into its main components
-#for message in consumer:
-#    print ("%d:%d [%s] k=%s v=%s" % (message.partition,
-#                          message.offset,
-#                          datetime.fromtimestamp(message.timestamp/1000).time(),
-#                          message.key,
-#                          message.value))
-
 
 # start simulator process
 kc = mykafka_consumer()
@@ -124,6 +140,19 @@ print('Kafka consumer online!')
 # use BOKEH WEB INTERFACE #
 ###########################
 
+def filler(dd, shift = 0, key = 'edg', val = 'cnt'):
+    outs = np.zeros(64)
+    outs[ [x - shift for x in dd[key]] ] = dd[val]
+    return outs
+
+def filler_group(dd, shift = 0, key = 'edg', val = 'cnt'):
+    mtx = np.concatenate([ np.array(xx[key]) for xx in dd ])
+    all_min = np.min(mtx);  all_max = np.max(mtx);
+    outs = np.zeros( (len(dd), int(all_max-all_min+1)) )
+    for i in range(len(dd)):
+        outs[i][ [x - all_min for x in dd[i][key]] ] = dd[i][val]
+    return np.arange(all_min, all_max +1), outs
+
 def update_graphs():  # read data from buffer & update plotsz
     global kc
     
@@ -137,11 +166,10 @@ def update_graphs():  # read data from buffer & update plotsz
     
     # ... or if there is new data
     dd = json.loads( kc.queue.get().value )
-    cleansed = dd['cleansed']
     
     ## update history
-    cds_tdc_history.stream( dict( t=[kc.last_datetime], ch0=[cleansed[0]], ch1=[cleansed[1]], 
-                                  ch2=[cleansed[2]], ch3=[cleansed[3]])
+    cds_tdc_history.stream( dict( t=[kc.last_datetime], ch0=[dd['ch0']], ch1=[dd['ch1']], 
+                                  ch2=[dd['ch2']], ch3=[dd['ch3']], tot=[dd['n']])
                           )
     
     if not kc.semaphore:
@@ -149,27 +177,34 @@ def update_graphs():  # read data from buffer & update plotsz
         return 0
     
     ## update main tab
-    div_proc_hits.text = div_proc_hits_strbase % (cleansed[0], cleansed[1], cleansed[2], cleansed[3], dd['tot_hits'])
+    div_proc_hits.text = div_proc_hits_strbase % (dd['ch0'], dd['ch1'], dd['ch2'], dd['ch3'],
+                                                  np.sum([dd['ch0'], dd['ch1'], dd['ch2'], dd['ch3']]) )
     div_last_refresh.text = div_last_refresh_strbase.format( datetime.now().strftime(TIMESTAMP_FORMAT) )
-
-    active_orb = dd['active_orbit']
-    cds_tdc_orb.data =  {'x': np.arange(len(active_orb[0])), 'ch0': active_orb[0], 'ch1': active_orb[1],
-                  'ch2': active_orb[2], 'ch3': active_orb[3]}
     
-    active_tdc = dd['active_tdc']
-    cds_tdc_active.data =  {'x': np.arange(64), 'ch0': active_tdc[0], 'ch1': active_tdc[1],
-                  'ch2': active_tdc[2], 'ch3': active_tdc[3]}
+    # 4 | TDC_CHANNEL in each ORBIT_CNT, per chamber
+    x, cnt = filler_group( [dd['ch0_orb_hist'], dd['ch1_orb_hist'], dd['ch2_orb_hist'], dd['ch3_orb_hist']] )
+    cds_tdc_orb.data =  {'x': x, 'ch0': cnt[0], 'ch1': cnt[1], 'ch2': cnt[2], 'ch3': cnt[3]}
     
-    active_sci = dd['active_scint']
-    cds_tdc_scint.data =  {'x': np.arange(64), 'ch0': active_sci[0], 'ch1': active_sci[1],
-                  'ch2': active_sci[2], 'ch3': active_sci[3]}
+    # 3 | active TDC_CHANNEL, per chamber
+    cds_tdc_active.data =  {'x': np.arange(64),
+                            'ch0': filler(dd['ch0_tdc_hist']),
+                            'ch1': filler(dd['ch1_tdc_hist'], shift=64),
+                            'ch2': filler(dd['ch2_tdc_hist']),
+                            'ch3': filler(dd['ch3_tdc_hist'], shift=64)}
     
-    dtimes = dd['driftimes']
-    edges = np.arange(0,1.1,0.1)
-    hist0, _ = np.histogram(dtimes[0], bins=edges)
-    hist1, _ = np.histogram(dtimes[1], bins=edges)
-    hist2, _ = np.histogram(dtimes[2], bins=edges)
-    hist3, _ = np.histogram(dtimes[3], bins=edges)
+    # 5 | active TDC_CHANNEL, per chamber, with scintillator
+    cds_tdc_scint.data =  {'x': np.arange(64),
+                           'ch0': filler(dd['ch0_tdc_hist_scint']),
+                           'ch1': filler(dd['ch0_tdc_hist_scint'], shift=64),
+                           'ch2': filler(dd['ch0_tdc_hist_scint']),
+                           'ch3': filler(dd['ch0_tdc_hist_scint'], shift=64)}
+    
+    # 6 | drift time plot
+    edges = np.arange(0,390,30) # set here the binning property
+    hist0, _ = np.histogram(dd['ch0_drifts'], bins=edges)
+    hist1, _ = np.histogram(dd['ch1_drifts'], bins=edges)
+    hist2, _ = np.histogram(dd['ch2_drifts'], bins=edges)
+    hist3, _ = np.histogram(dd['ch3_drifts'], bins=edges)
     cds_drifts.data = { 'ch0': hist0, 'ch1': hist1, 'ch2': hist2, 'ch3': hist3,
                        'edgel':edges[:-1], 'edger':edges[1:]}
     return 0
@@ -179,11 +214,11 @@ def update_graphs():  # read data from buffer & update plotsz
 # bokeh plots #
 ###############
 
-cds_tdc_orb = ColumnDataSource( {'x':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[]} )
+cds_tdc_orb = ColumnDataSource( {'x':[], 'ch0':[],'ch1':[],'ch2':[],'ch3':[]} )
 cds_tdc_active = ColumnDataSource( {'x':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[]} )
 cds_tdc_scint = ColumnDataSource( {'x':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[]} )
 cds_drifts = ColumnDataSource( { 'ch0': [], 'ch1': [], 'ch2': [], 'ch3': [], 'edgel':[], 'edger':[]} )
-cds_tdc_history = ColumnDataSource( {'t':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[]} )
+cds_tdc_history = ColumnDataSource( {'t':[], 'ch0':[], 'ch1':[], 'ch2':[], 'ch3':[], 'tot':[]} )
 
 # active TDC vs orbits for each detector
 plot_TDC_orbits = figure(sizing_mode="stretch_width",
@@ -206,25 +241,31 @@ hist_TDC_scint.xaxis.axis_label = "TDC"
 hist_TDC_scint.vbar_stack(['ch0', 'ch1','ch2','ch3'], x='x', width=0.9, source=cds_tdc_scint, color = chamber_colors)
 
 # drift time histo
-hist_drift0 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch0')
-hist_drift0.quad(source=cds_drifts, top="ch0", bottom=0, left="edgel", right="edger")
-hist_drift1 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch1')
-hist_drift1.quad(source=cds_drifts, top="ch1", bottom=0, left="edgel", right="edger")
-hist_drift2 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch2')
-hist_drift2.quad(source=cds_drifts, top="ch2", bottom=0, left="edgel", right="edger")
-hist_drift3 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch3')
-hist_drift3.quad(source=cds_drifts, top="ch3", bottom=0, left="edgel", right="edger")
+hist_drift0 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch0', toolbar_location=None)
+hist_drift0.quad(source=cds_drifts, top="ch0", bottom=0, left="edgel", right="edger", color = chamber_colors[0])
+hist_drift1 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch1', toolbar_location=None)
+hist_drift1.quad(source=cds_drifts, top="ch1", bottom=0, left="edgel", right="edger", color = chamber_colors[1])
+hist_drift2 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch2', toolbar_location=None)
+hist_drift2.quad(source=cds_drifts, top="ch2", bottom=0, left="edgel", right="edger", color = chamber_colors[2])
+hist_drift3 = figure(plot_width=250,  plot_height=320, tools="pan,reset,save", title='Ch3', toolbar_location=None)
+hist_drift3.quad(source=cds_drifts, top="ch3", bottom=0, left="edgel", right="edger", color = chamber_colors[3])
 
 plot_TDC_history = figure( 
         plot_width=900, plot_height=320, tools="pan,reset,save",
         x_axis_type='datetime', sizing_mode="stretch_width")
 plot_TDC_history.xaxis.axis_label = "time"
-plot_TDC_history.yaxis.axis_label = "TDC counts"
-plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch0", line_width = 2, line_color = chamber_colors[0])
-plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch1", line_width = 2, line_color = chamber_colors[1])
-plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch2", line_width = 2, line_color = chamber_colors[2])
-plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch3", line_width = 2, line_color = chamber_colors[3])
-
+plot_TDC_history.yaxis.axis_label = "streamed events"
+plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch0", line_width = 2,
+                      legend_label="Ch0 hits", line_color = chamber_colors[0])
+plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch1", line_width = 2, 
+                      legend_label="Ch1 hits", line_color = chamber_colors[1])
+plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch2", line_width = 2,
+                      legend_label="Ch2 hits",line_color = chamber_colors[2])
+plot_TDC_history.line(source=cds_tdc_history, x="t", y="ch3", line_width = 2,
+                      legend_label="Ch3 hits", line_color = chamber_colors[3])
+plot_TDC_history.line(source=cds_tdc_history, x="t", y="tot", line_width = 2,
+                      legend_label="Spark buffer", line_color = 'purple')
+plot_TDC_history.legend.location = "top_left"
 ##########
 #  misc  #
 ##########
@@ -235,20 +276,20 @@ big = {"font-size": "150%", "font-weight": "bold"}
 bigger = {"font-size": "200%", "font-weight": "bold"}
 
 # header
-head_text = [ Div(text=r"dashboard ver 0.0") ]
+head_text = [ Div(text=r"dashboard ver 1.0") ]
 
 # button to start/stop simulation
 pause_bt = Button(label='pause', button_type="success", width=100, sizing_mode="fixed", align='center')
 pause_bt.on_click( kc.toggle_semaphore )
-pause_cbox = CheckboxGroup(labels=['keep history updated in pause'], active=[0])
+pause_cbox = CheckboxGroup(labels=['keep history updated in pause'], active=[0], align='center')
 
 kc.set_pause_callback(pause_bt, pause_cbox) # set callback objects
 
 
 
-# graph selector
-graph_type_tdc_labels = ["Histogram", "Heatmap"]
-graph_type_tdc = RadioButtonGroup(labels=graph_type_tdc_labels, active=0)
+# graph selector  # dismissed
+#graph_type_tdc_labels = ["Histogram", "Heatmap"]
+#graph_type_tdc = RadioButtonGroup(labels=graph_type_tdc_labels, active=0)
 
 
 # divs
@@ -311,7 +352,7 @@ doc = curdoc()
 doc.add_periodic_callback(update_graphs, 500)
 
 graphs_tab1 = layout([ div_proc_hits, Div(text='<br><br>'),  # table with processed hit counter
-                       graph_type_tdc,                       # select type of plot
+                       #graph_type_tdc,                       # select type of plot  (DISMISSED)
                        [ column(Div(text="Processed hits (cleansed) per chamber", style = notsobig), hist_TDC_active, sizing_mode="stretch_width"),
                          column(Div(text="Active TDC with scintillator signal", style = notsobig), hist_TDC_scint, sizing_mode="stretch_width")
                        ],
@@ -319,13 +360,13 @@ graphs_tab1 = layout([ div_proc_hits, Div(text='<br><br>'),  # table with proces
                        Div(text="Drift times per detector", style = notsobig, sizing_mode="stretch_width"),
                        [ hist_drift0, hist_drift1, hist_drift2, hist_drift3 ],
                      ], sizing_mode="stretch_width")
-panel_tab1 = Panel(child=graphs_tab1, title="Data quality (live)")
+panel_tab1 = Panel(child=graphs_tab1, title="Data quality")
 
 graphs_tab2 = layout([ pause_cbox,
-                       Div(text="TDC hits", style = notsobig, sizing_mode="stretch_width"),
+                       Div(text="Event stream", style = notsobig, sizing_mode="stretch_width"),
                        plot_TDC_history
                      ], sizing_mode="stretch_width")
-panel_tab2 = Panel(child=graphs_tab2, title="Event monitor")
+panel_tab2 = Panel(child=graphs_tab2, title="Monitor")
 
 lyt = grid([ head_text,
              row( column(pause_bt, div_last_refresh, div_last_data, width= 260, sizing_mode="fixed"),

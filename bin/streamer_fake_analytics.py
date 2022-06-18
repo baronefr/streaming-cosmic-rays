@@ -4,11 +4,11 @@
 #   MAPD module B // University of Padua, AY 2021/22
 #   Group 10 / Barone Nagaro Ninni Valentini
 #
-#  This is a producer of Kafka messages.
+#  This is a producer of FAKE Kafka messages, just
+#  to debug the dashboard (ver 0.0)
 #
 #--------------------------------------------------------
 #  coder: Barone Francesco, last edit: 10 jun 2022
-#  Open Access licence
 #--------------------------------------------------------
 
 from kafka import KafkaProducer
@@ -55,7 +55,7 @@ while 1:
     }
     
     producer.send(TOPIC, json.dumps(fake_data).encode('utf-8'))
-    #producer.flush()
+    #producer.flush()  # let Kafka manage this (linger & batchsize)
     
     tic_toc = time.perf_counter() - tic
     time.sleep( max(0, producer_period - tic_toc) )

@@ -1,18 +1,26 @@
 # downloads
 bin/download/
 bin/kafka/
-bin/spark/
-data/mapd-minidt-stream/
 
-# kafka & spark
-
+# draw sources
+share/*.drawio
 
 # checkpoints
 **/.ipynb_checkpoints
 **/__pycache__
 
+# tmps
+**/tmp/
+
 # custom hidden files
 *.hidden
 
-# tmps
-**/tmp/
+# critical documentation
+config/cloudveneto_setup.md
+
+# critical code
+bin/spark_analysis.py
+bin/spark_analysis_demo.ipynb
+
+# data
+data/mapd-minidt-stream/

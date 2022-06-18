@@ -1,2 +1,7 @@
+findspark
+pyspark
+pyarrow
 kafka-python
 confluent-kafka
+bokeh
+pandas

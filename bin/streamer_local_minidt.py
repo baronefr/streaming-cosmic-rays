@@ -2,34 +2,65 @@
 
 #########################################################
 #   MAPD module B // University of Padua, AY 2021/22
-#   Group 2202 / Barone Nagaro Ninni Valentini
+#   Group 10 / Barone Nagaro Ninni Valentini
 #
-#  This is a producer of Kafka messages, which polls data
-#  from a local minidt dataset. This scripts implements
-#  a parallel data reader to preload the next file of
-#  the dataset, to keep the buffer always online.
+#  This is a producer of Kafka messages, which buffers
+#  data from a local minidt dataset. 
+#  This scripts also implements a parallel data reader
+#  to preload the next file of the dataset.
 #
 #--------------------------------------------------------
-#  coder: Barone Francesco, last edit: 10 jun 2022
-#  Open Access licence
+#  coder: Barone Francesco, last edit: 17 jun 2022
 #--------------------------------------------------------
 
-from kafka import KafkaProducer
+import sys
+import configparser
+from configparser import ExtendedInterpolation
 
 import json
 import time
 import random
 import numpy as np
 
+from kafka import KafkaProducer
+
 from threading import *
 
 
-producer_rate = 1100       # Hz
-preload_margin = 500000
-KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092',]
-TOPIC='cosmo-stream'
-file_template = "./data/mapd-minidt-stream/data_0000{:02d}.txt"
+# parsing settings
+if len(sys.argv) > 1:
+    print('-- environment mode, target:', sys.argv[1])
+    
+    # read config file
+    config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
+    config.read(sys.argv[1])
+    try:
+        PRODUCER_RATE = int( config['DATA-STREAM']['DSTR_PRODUCER_RATE'] )
+        KAFKA_BOOTSTRAP_SERVER = str( config['KAFKA']['KAFKA_BOOTSTRAP'] ).replace('\'', '')
+        TOPIC = str(config['KAFKA']['TOPIC_STR']).replace('\'', '')
+        LINGER = int( config['DATA-STREAM']['DSTR_LINGER'] )
+        BATCH_SIZE = int( config['DATA-STREAM']['DSTR_BATCHSZ'] )
+    except Exception as e:
+        print('ERROR: config file error')
+        print(e)
+        sys.exit(1)
+else:
+    print('-- standalone mode')
+    PRODUCER_RATE = 1100
+    KAFKA_BOOTSTRAP_SERVER = 'localhost:9092'
+    TOPIC = 'cosmo-stream'
+    LINGER = 2000
+    BATCH_SIZE = 1024
 
+print('[info] configuration:')
+print(f' server {KAFKA_BOOTSTRAP_SERVER} on topic {TOPIC}')
+print(f' data rate {PRODUCER_RATE} Hz')
+print(f' linger = {LINGER} ms,  batch = {BATCH_SIZE} ')
+
+#########################################################
+
+file_template = "./data/mapd-minidt-stream/data_0000{:02d}.txt"
+preload_margin = 500000
 
 class parallel_reader(Thread):
     def __init__(self, fname):
@@ -55,7 +86,8 @@ class parallel_reader(Thread):
 
 
 # Kafka producer object
-producer = KafkaProducer(bootstrap_servers = KAFKA_BOOTSTRAP_SERVERS, linger_ms=2000, batch_size=1024*1024)  #batch_size
+producer = KafkaProducer(bootstrap_servers = KAFKA_BOOTSTRAP_SERVER,
+                         linger_ms=LINGER, batch_size=BATCH_SIZE*1024)
 # check doc at  https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html
 
 
@@ -66,7 +98,7 @@ cdata, clen = dataset.records, dataset.length
 
 
 # producer
-print(f'\nstart producer at rate {producer_rate} Hz\n')
+print(f'\nstart producer at rate {PRODUCER_RATE} Hz\n')
 idx, current_data = 0, 0
 while 1:
     
@@ -77,7 +109,7 @@ while 1:
     
     #print(cdata[idx])  # debug only
     
-    ## if you like the JSON style...
+    ##     if you like the JSON style...
     #msg = {
     #    'HEAD': cdata[idx][0],
     #    'FPGA': cdata[idx][1],
@@ -87,10 +119,9 @@ while 1:
     #    'TDC_MEAS' : cdata[idx][5]
     #}
     #lst = tuple(int(xx) for xx in cdata[idx])
-    #print(json.dumps(lst))
     #producer.send(TOPIC, json.dumps(lst).encode('utf-8'))
     
-    producer.send(TOPIC, cdata[idx].encode('utf-8'))
+    producer.send(TOPIC, cdata[idx].strip().encode('utf-8'))
     #producer.flush()  # no if you aggregate into batches!
 
     idx += 1
@@ -101,4 +132,4 @@ while 1:
         idx = 0
     
     tic_toc = time.perf_counter() - tic
-    time.sleep( max(0, 1/producer_rate - tic_toc) )
+    time.sleep( max(0, 1/PRODUCER_RATE - tic_toc) )

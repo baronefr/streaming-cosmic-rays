@@ -2,7 +2,7 @@
 
 #########################################################
 #   MAPD module B // University of Padua, AY 2021/22
-#   Group 2202 / Barone Nagaro Ninni Valentini
+#   Group 10 / Barone Nagaro Ninni Valentini
 #
 #  This script checks the status/properties of a 
 #  Kafka server.
@@ -13,17 +13,17 @@
 #--------------------------------------------------------
 
 echo " interact kafka | using cfg: $COSMO_CONFIG_PATH"
-source <(grep = $COSMO_CONFIG_PATH/kafka.ini)
+source <(grep = $COSMO_CONFIG_PATH/main.ini)
 
 if [ "$1" = "list" ]; then
     echo " > list of available topics"
-    $KAFKA_BIN/kafka-topics.sh --list --bootstrap-server localhost:$BOOTSTRAP_PORT
+    $KAFKA_BIN/kafka-topics.sh --list --bootstrap-server $KAFKA_BOOTSTRAP
     
 elif [ $1 = "describe" ]; then
     echo " > describe topics"
-    for i in ${!TOPICS[@]}; do
-        echo " -- topic ${TOPICS[$i]}"
-        $KAFKA_BIN/kafka-topics.sh --describe --topic ${TOPICS[$i]} --bootstrap-server localhost:$BOOTSTRAP_PORT
+    for i in ${!MANAGED_TOPIC[@]}; do
+        echo " -- topic ${MANAGED_TOPIC[$i]}"
+        $KAFKA_BIN/kafka-topics.sh --describe --topic ${MANAGED_TOPIC[$i]} --bootstrap-server $KAFKA_BOOTSTRAP
     done
     
 else

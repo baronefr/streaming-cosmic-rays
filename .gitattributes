@@ -1,2 +1,3 @@
 bin/kafka/** linguist-vendored
 bin/spark/** linguist-vendored
+bin/mydash/statis/** linguist-vendored

@@ -4,7 +4,7 @@
 #    local data downloader from cloud veneto            #
 #########################################################
 #   MAPD module B // University of Padua, AY 2021/22
-#   Group 2202 / Barone Nagaro Ninni Valentini
+#   Group 10 / Barone Nagaro Ninni Valentini
 #--------------------------------------------------------
 
 import boto3
