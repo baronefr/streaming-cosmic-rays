@@ -223,8 +223,9 @@ Management and analysis of Physics Dataset, modB<br>
 </ul>
 <p>In order to manage all the involved entities, we provide a simple bash interface to <strong>manage the cluster routines: COSMO</strong>.</p>
 <p>The dataset comes from muon detectors that have been built and installed in Legnaro INFN Laboratories.</p>
-<p>A <strong>video demo</strong> is available <a href="https://youtu.be/qw_6mcKxGbU">here</a>, although it is NOT indicative of the final performance of our delivery. Sometimes the data buffer starts before the actual Spark processing &amp; data accumulates, so Spark has to work more in order to catch up with the buffer. The stream stabilizes usually within 2 minutes. The final <strong>dashboard</strong> looks like this:<br />
+<p>A <strong>video demo</strong> is available <a href="https://youtu.be/V1j8BzlxaQQ">here</a>, although it is NOT indicative of the final performance of our delivery. Sometimes the data buffer starts before the actual Spark processing &amp; data accumulates, so Spark has to work more in order to catch up with the buffer. The stream stabilizes usually within 2 minutes. The final <strong>dashboard</strong> looks like this:<br />
 <img src="share/dashscreen.png" alt="dashscreen" /></p>
+<p><br></p>
 <h3 id="cosmo">COSMO</h3>
 <p>COSMO is an utility to manage the execution of remote streaming analysis. It is coded in <strong>bash</strong>, and it must be installed on the master node.</p>
 <p>COSMO provides access to <em>functions</em> (which act on a single entity of our framework), as well as <em>routines</em> (which are automatized <em>collections of functions</em>). Functions are more development-oriented, for debug purpose; we suggest to use routines. The standard routines are:</p>
@@ -255,6 +256,7 @@ Management and analysis of Physics Dataset, modB<br>
 </tbody>
 </table>
 <p>COSMO loads the execution parameters from a .ini <strong>configuration file</strong>, which must be provided inside its own directory in <code>./config/*</code>. We provide two default setups: <code>config/localhost</code> and <code>config/cloud</code>. The latter is the one we configured explicitly for Cloud Veneto. Nevertheless, even the localhost preset must be edited depending on your environment.</p>
+<p><br><br></p>
 <h2 id="setup">Setup</h2>
 <p>Make sure you have installed the Python requirements (<code>requirements.txt</code>). You must have a working Spark (3.2.1) &amp; Kafka (3.2.0) cluster.</p>
 <p>For local execution you have to download the <strong>dataset</strong> from the bucket <code>mapd-minidt-stream</code>. To do this, we provide an automatic Python script in <code>data/local-download.py</code>. To make it work, you must provide the access credentials in a json file. Check out the README file inside the <em>data</em> directory for more informations.</p>
@@ -266,6 +268,7 @@ cosmo() {
 export COSMO_CONFIG_PATH
 export -f cosmo</code></pre>
 <p>replacing YOUR_ABSOLUTE_PATH with the actual absolute path of your installation. The variable COSMO_CONFIG_PATH specifies which configuration files to use.</p>
+<p><br></p>
 <h2 id="execution">Execution</h2>
 <p>To start the server</p>
 <pre><code class="bash language-bash">cosmo init
@@ -308,7 +311,7 @@ cosmo dismiss</code></pre>
 <h3 id="cloud-veneto">Cloud Veneto</h3>
 <p>Login to the <em>MAPD-B_Gr10-1</em> machine, with user <em>cosmo</em>. Then invoke <code>cosmo</code> as described above.</p>
 <hr />
-<p>The logo above is provided under Flaticon License, <a href="https://www.flaticon.com/free-icons/cosmos" title="cosmos icons">Cosmos icons created by Ridho Imam Prayogi - Flaticon</a>.</p>
+<p>The logo of this application is provided under Flaticon License, <a href="https://www.flaticon.com/free-icons/cosmos" title="cosmos icons">Cosmos icons created by Ridho Imam Prayogi - Flaticon</a>.</p>
 <hr />
 <h5 align="center">MAPD (module B) project<br>AY 2021/2022 University of Padua</h5>
 <p align="center">

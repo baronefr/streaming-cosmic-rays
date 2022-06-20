@@ -49,6 +49,7 @@ help() {
     echo ""
     echo " - alternatively, insert a specific function name (dev)"
     echo " - type help_kafka  to navigate the Kafka sources"
+    echo " - type  wanda  to ask for a fairly oddparent"
     echo "-------------------------------------------------------"
     echo " MAPD B: Group 10 // Barone, Nagaro, Ninni, Valentini"
     echo " coded by Barone Francesco - @github.com/baronefr"
@@ -192,7 +193,7 @@ elif [ "$1" == "run" ]; then
     echo "dashboard/$LAST_BCKPID" >> $COSMO_SESSION
     
     echo 'wait spawn time...'
-    sleep 15
+    sleep $SPAWN_TIME
     
     echo -e "\n${cbYELLOW}spawn minidt streamer${cNC}"
     stream_minidt_hidden
@@ -221,7 +222,9 @@ elif [ "$1" == "help" ]; then
     help
 elif [ "$1" == "-h" ]; then
     help
-
+    
+elif [ "$1" == "wanda" ]; then
+    cat $COSMO_BINARIES/fairy.ans
 else
     echo -e "${cYELLOW}dev mode${cNC}"
     # execute function by name

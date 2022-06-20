@@ -1,0 +1,14 @@
+config/cloudveneto_setup.md
+data/mapd-minidt-stream/data_000001.txt
+data/mapd-minidt-stream/data_000002.txt
+data/mapd-minidt-stream/data_000003.txt
+data/mapd-minidt-stream/data_000004.txt
+data/mapd-minidt-stream/data_000005.txt
+bin/download
+bin/kafka
+.delignore
+.gitignore
+.gitattributes
+.git
+*/tmp
+*.hidden
