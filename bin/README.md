@@ -7,6 +7,8 @@
 
 - *spark_analysis.py* is the actual Spark analysis code
     - to make this file more readable, we provide a Jupyter notebook: *spark_analysis_demo.ipynb*
+![spark_warning](../share/warning_spark.png)
+    
 - *streamer_local_minidt.py* creates a stream of values from muon detectors
 
 ### requirements
