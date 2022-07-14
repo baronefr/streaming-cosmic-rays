@@ -1,12 +1,12 @@
 # Streaming processing of cosmic rays
 
 <p align="center">
-Management and analysis of Physics Dataset, modB<br>
+Management and Analysis of Physics Dataset, modB<br>
 <b>Group 10</b> // Barone, Nagaro, Ninni, Valentini
 </p>
 
 
-This is our final project for Management and Analysis of Physics Dataset (module B). In this work, we perform **streaming processing of data collected by a particle physics detector**, publishing the data quality analysis to a **dashboard for live monitoring**. The workflow is summarized in the following schema:
+This is our final project for Management and Analysis of Physics Dataset (module B). In this work, we perform **streaming processing of data collected by a particle physics detector**, publishing data quality statistics to a **dashboard for live monitoring**. The workflow is summarized in the following schema:
 
 ![framework](share/framework.png)
 
@@ -14,11 +14,11 @@ This is our final project for Management and Analysis of Physics Dataset (module
 - **Kafka**: manage the data IO & deliver the statistics
 - **Bokeh**: process the statistics & create a dashboard
 
-In order to manage all the involved entities, we provide a simple bash interface to **manage the cluster routines: COSMO**.
+In order to manage all the involved entities, we provide a simple **bash interface** to manage the **cluster routines**: **COSMO**.
 
 The dataset comes from muon detectors that have been built and installed in Legnaro INFN Laboratories.
 
-A **video demo** is available [here](https://youtu.be/V1j8BzlxaQQ), although it is NOT indicative of the final performance of our delivery. Sometimes the data buffer starts before the actual Spark processing & data accumulates, so Spark has to work more in order to catch up with the buffer. The stream stabilizes usually within 2 minutes. The final **dashboard** looks like this:
+A **video demo** is available [here](https://youtu.be/V1j8BzlxaQQ), although this is NOT indicative of the final performance of our final code. Sometimes the data buffer starts before Spark and data accumulates. Eventually Spark catches up with the buffer, usually within 2 minutes. The final **dashboard** looks like this:
 ![dashscreen](share/dashscreen.png)
 
 <br>
@@ -33,6 +33,7 @@ COSMO provides access to *functions* (which act on a single entity of our framew
 | :--- | :---: |
 | `cosmo init` | start Spark & Kafka clusters |
 | `cosmo run` | execute the streaming analysis |
+| `cosmo beat` | heartbeat to the processing entities |
 | `cosmo halt` | stop the streaming analysis |
 | `cosmo dismiss` | stop clusters |
 
@@ -85,7 +86,7 @@ cosmo dismiss
 
 If something does not work, then debugging is needed ...
 
-### Cloud Veneto
+#### Cloud Veneto
 
 Login to the *MAPD-B_Gr10-1* machine, with user *cosmo*. Then invoke `cosmo` as described above.
 
