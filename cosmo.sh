@@ -18,7 +18,7 @@
 #   export COSMO_CONFIG_PATH
 #
 #--------------------------------------------------------
-#  coder: Barone Francesco, last edit: 17 jun 2022
+#  coder: Barone Francesco, last edit: 19 jun 2022
 #  Open Access licence
 #--------------------------------------------------------
 
@@ -47,6 +47,8 @@ help() {
     echo "   halt       | stop the streaming analysis"
     echo "   dismiss    | stop cluster"
     echo ""
+    echo "   beat       | heartbeat"
+    echo ""
     echo " - alternatively, insert a specific function name (dev)"
     echo " - type help_kafka  to navigate the Kafka sources"
     echo " - type  wanda  to ask for a fairly oddparent"
@@ -55,22 +57,10 @@ help() {
     echo " coded by Barone Francesco - @github.com/baronefr"
 }
 
-help_kafka() {
-    echo " kafka hints:"
-    echo "   kafka_status    list      <TOPIC>"
-    echo "                   describe  <TOPIC>"
-    echo "   kafka_interact  producer  <TOPIC>"
-    echo "                   consumer  <TOPIC>"
-}
-
 
 #####################
 #  general config   #
 #####################
-
-read_ini() {
-    source <(grep = $COSMO_CONFIG_PATH/main.ini)
-}
 
 read_ini
 
@@ -80,10 +70,6 @@ LOG_HIDDEN1='log/nohup1.log'
 LOG_HIDDEN2='log/nohup2.log'
 COSMO_SESSION='log/session.cosmo'
 
-get_pid() {
-    session_str=$(cat $COSMO_SESSION | grep $1)
-    READ_PID=${session_str#*/}
-}
 
 #####################
 #   dev functions   #
@@ -216,7 +202,20 @@ elif [ "$1" == "halt" ]; then
     echo -e "killing ${cbRED}dashboard${cNC} @ $READ_PID"
     kill -9 $READ_PID
     set -e
+    
+    echo "halted $(date)" >> $COSMO_SESSION
+    
+elif [ "$1" == "beat" ]; then
+    # heartbeat routine
 
+    get_pid stream
+    check_pid 'stream' $READ_PID
+    
+    get_pid spark
+    check_pid 'spark ' $READ_PID
+    
+    get_pid dashboard
+    check_pid 'dash  ' $READ_PID
 
 elif [ "$1" == "help" ]; then
     help
